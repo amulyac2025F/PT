@@ -1,6 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -15,10 +14,18 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
+        {/* 1. Landing Page */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+
+        {/* 2. Authentication Modals */}
+        <Stack.Screen name="signup" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="signin" options={{ presentation: 'modal', headerShown: false }} />
+
+        {/* 3. The Main App*/}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        
+        <Stack.Screen name="+not-found" />
       </Stack>
-      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }

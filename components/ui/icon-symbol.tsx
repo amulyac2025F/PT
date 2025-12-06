@@ -6,7 +6,7 @@ import { ComponentProps } from 'react';
 import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
 
 type IconMapping = Record<SymbolViewProps['name'], ComponentProps<typeof MaterialIcons>['name']>;
-type IconSymbolName = keyof typeof MAPPING;
+export type IconSymbolName = keyof typeof MAPPING;
 
 /**
  * Add your SF Symbols to Material Icons mappings here.
@@ -26,6 +26,10 @@ const MAPPING = {
   'chart.line.uptrend.xyaxis': 'trending-up', 
   'rectangle.portrait.and.arrow.right': 'logout', 
   'person.fill': 'person',
+  'person': 'person',
+  'envelope': 'mail',
+  'lock': 'lock',
+  'xmark': 'close',
 } as IconMapping;
 
 /**
