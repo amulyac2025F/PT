@@ -10,8 +10,13 @@ export default function SignInScreen() {
   const [userType, setUserType] = useState<'patient' | 'doctor'>('patient');
 
   const handleSignIn = () => {
-    router.replace('/(tabs)');
-  }
+    // Handle sign-in logic here (e.g., form validation, API calls)
+    if (userType == 'doctor'){
+      router.replace('/doctor');
+    } else{
+ router.replace('/(tabs)');    }
+    }
+  
 
   return (
     <SafeAreaView style={styles.modalContainer}>
