@@ -20,19 +20,61 @@ export default function DoctorDashboard() {
   const colorScheme = useColorScheme() ?? 'light';
   const tint = Colors[colorScheme].tint;
 
+  // State for patient list and add patient modal
+  const [patients, setPatients] = useState<Patient[]>(() => SAMPLE);
+  const [addPatientModalVisible, setAddPatientModalVisible] = useState(false);
+  const [newPatientForm, setNewPatientForm] = useState({ name: '', email: '', patientId: '' });
+
+  // Reset form and show add patient modal
+  const openAddPatient = () => {
+    setNewPatientForm({ name: '', email: '', patientId: '' });
+    setAddPatientModalVisible(true);
+  };
+
+  // Hide add patient modal
+  const closeAddPatient = () => setAddPatientModalVisible(false);
+
+  // Add a new patient to the list after validation
+  const handleAddPatient = () => {
+    // Validate that all fields are filled
+    if (!newPatientForm.name.trim() || !newPatientForm.email.trim() || !newPatientForm.patientId.trim()) {
+      return;
+    }
+    
+    // Create new patient object with unique ID
+    const newP: Patient = {
+      id: Date.now().toString(),
+      name: newPatientForm.name.trim(),
+      email: newPatientForm.email.trim(),
+      exercises: [],
+    };
+    
+    // Add to top of patient list and close modal
+    setPatients((prev) => [newP, ...prev]);
+    closeAddPatient();
+  };
+
+  // Update patient's exercise plan when saved from modal
+  const handleSavePlan = (updatedPatient: Patient) => {
+    setPatients((prev) =>
+      prev.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
+    );
+    setPlanModalVisible(false);
+  };
+
   return (
     <ThemedView style={styles.container}>
-      {/* Header */}
+      {/* Header with title and navigation buttons */}
       <View style={styles.header}>
-        {/*sets title to PT Portal */}
         <ThemedText type="title">PT Portal</ThemedText>
         <View style={styles.headerRight}>
-          {/*house button to switch to patient view*/}
+          {/* Switch to patient view */}
           <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.headerButton}>
             <IconSymbol name="house.fill" size={20} color={tint} />
             <ThemedText style={{ marginLeft: 8 }}>Switch to Patient</ThemedText>
           </TouchableOpacity>
-                    {/*arrow button to switch to sign in view*/}
+          
+          {/* Logout */}
           <TouchableOpacity onPress={() => router.replace('/signin')} style={styles.headerButton}>
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={tint} />
             <ThemedText style={{ marginLeft: 8 }}>Logout</ThemedText>
@@ -40,7 +82,7 @@ export default function DoctorDashboard() {
         </View>
       </View>
 
-      {/* Navigation + creates a touchable button for each one*/}
+      {/* Tab navigation */}
       <View style={styles.nav}>
         {(['Home', 'My Patients', 'Profile'] as Tab[]).map((t) => (
           <TouchableOpacity
@@ -53,23 +95,27 @@ export default function DoctorDashboard() {
         ))}
       </View>
 
+      {/* Main content area - renders based on active tab */}
       <ScrollView contentContainerStyle={styles.content}>
+        
+        {/* Home tab: Dashboard overview with stats */}
         {active === 'Home' && (
           <View>
             <ThemedText type="subtitle">Welcome back, Dr. Smith</ThemedText>
-
             <View style={styles.grid}>
+              {/* Total patient count */}
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold">Total Patients</ThemedText>
-                <ThemedText type="title">24</ThemedText>
+                <ThemedText type="title">{patients.length}</ThemedText>
               </View>
-
+              
+              {/* Count of patients with active exercise plans */}
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold">Active Plans</ThemedText>
-                <ThemedText type="title">18</ThemedText>
+                <ThemedText type="title">{patients.filter(p => p.exercises.length > 0).length}</ThemedText>
               </View>
-
-             
+              
+              {/* Placeholder for patients needing attention */}
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold">Needs Attention</ThemedText>
                 <ThemedText type="title">3</ThemedText>
@@ -78,8 +124,11 @@ export default function DoctorDashboard() {
           </View>
         )}
 
+        {/* My Patients tab: Searchable patient list with actions */}
         {active === 'My Patients' && (
           <PatientsListInline
+            patients={patients}
+            onAdd={() => openAddPatient()}
             onEdit={(p) => {
               setSelectedPatient(p);
               setPlanModalVisible(true);
@@ -87,6 +136,7 @@ export default function DoctorDashboard() {
           />
         )}
 
+        {/* Profile tab: Doctor profile settings placeholder */}
         {active === 'Profile' && (
           <View>
             <ThemedText type="subtitle">Profile</ThemedText>
@@ -94,31 +144,95 @@ export default function DoctorDashboard() {
           </View>
         )}
 
-        {/* Modal for editing exercise plan */}
+        {/* Modal for creating/editing exercise plans */}
         <CreateExercisePlanModal
           patient={selectedPatient}
           visible={planModalVisible}
           onClose={() => setPlanModalVisible(false)}
+          onSave={handleSavePlan}
         />
+
+        {/* Modal for adding a new patient */}
+        <Modal visible={addPatientModalVisible} animationType="slide" onRequestClose={closeAddPatient} transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modal, { width: '90%', maxHeight: '60%' }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add Patient</Text>
+                <Pressable onPress={closeAddPatient}>
+                  <Text style={styles.modalClose}>Close</Text>
+                </Pressable>
+              </View>
+
+              <View style={{ paddingVertical: 8 }}>
+                {/* Patient name input */}
+                <Text style={{ marginBottom: 6 }}>Name</Text>
+                <TextInput
+                  placeholder="Patient name"
+                  value={newPatientForm.name}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, name: v }))}
+                  style={styles.search}
+                  placeholderTextColor="#8b8f96"
+                />
+                
+                {/* Patient email input */}
+                <Text style={{ marginTop: 8, marginBottom: 6 }}>Email</Text>
+                <TextInput
+                  placeholder="patient@email.com"
+                  value={newPatientForm.email}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, email: v }))}
+                  style={styles.search}
+                  placeholderTextColor="#8b8f96"
+                />
+                
+                {/* Patient ID input */}
+                <Text style={{ marginTop: 8, marginBottom: 6 }}>Patient ID</Text>
+                <TextInput
+                  placeholder="Patient ID"
+                  value={newPatientForm.patientId}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, patientId: v }))}
+                  style={styles.search}
+                  placeholderTextColor="#8b8f96"
+                />
+              </View>
+
+              {/* Modal action buttons */}
+              <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                <TouchableOpacity style={[styles.outlineBtn, { paddingHorizontal: 16 }]} onPress={closeAddPatient}>
+                  <Text style={styles.outlineBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleAddPatient}>
+                  <Text style={styles.saveButtonText}>Add Patient</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </ThemedView>
   );
 }
 
-// CreateExercisePlanModal — two-column layout 
+/**
+ * Modal component for creating and customizing exercise plans for patients
+ * Allows selection from exercise library, customization of sets/reps, and assignment to patients
+ */
 function CreateExercisePlanModal({
   patient,
   visible,
   onClose,
+  onSave,
 }: {
   patient: Patient | null;
   visible: boolean;
   onClose: () => void;
+  onSave: (updatedPatient: Patient) => void;
 }) {
+  // Exercise type definition with default parameters
   type Exercise = { id: string; name: string; description?: string; reps: number; sets: number; category: string };
 
+  // Library of pre-defined exercises organized by category
   const exerciseLibrary: Exercise[] = [
-    { id: 'e1', name: 'Shoulder flexion', description: 'Raise arm forward', reps: 10, sets: 3, category: 'Shoulder' },
+    { id: 'e1', name: 'Shoulder Flexion', description: 'Raise arm forward', reps: 10, sets: 3, category: 'Shoulder' },
     { id: 'e2', name: 'Shoulder Abduction', description: 'Raise arm sideways', reps: 10, sets: 3, category: 'Shoulder' },
     { id: 'e3', name: 'Shoulder External Rotation', description: 'Rotate shoulder outward', reps: 12, sets: 2, category: 'Shoulder' },
     { id: 'e4', name: 'Knee Extension', description: 'Straighten knee', reps: 15, sets: 2, category: 'Knee' },
@@ -126,34 +240,52 @@ function CreateExercisePlanModal({
     { id: 'e6', name: 'Ankle Circles', description: 'Rotate ankle', reps: 10, sets: 2, category: 'Ankle' },
   ];
 
+  // Get unique categories from exercise library, plus 'All' option
   const categories = ['All', ...Array.from(new Set(exerciseLibrary.map((e) => e.category)))];
 
+  // State for selected exercises, search query, and active category filter
   const [selected, setSelected] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
   const [selCategory, setSelCategory] = useState<string>('All');
 
+  // Filter exercises based on search text and selected category
   const filtered = exerciseLibrary.filter((e) => {
     const matchesSearch = (e.name + ' ' + (e.description ?? '') + ' ' + e.category).toLowerCase().includes(search.toLowerCase());
     const matchesCategory = selCategory === 'All' || e.category === selCategory;
     return matchesSearch && matchesCategory;
   });
 
+  // Toggle exercise selection (add/remove from plan)
   const toggleSelect = (exercise: Exercise) => {
     const exists = selected.find((s) => s.id === exercise.id);
     if (exists) setSelected((s) => s.filter((x) => x.id !== exercise.id));
     else setSelected((s) => [...s, { ...exercise }]);
   };
 
+  // Remove an exercise from the current plan
   const removeExercise = (id: string) => setSelected((s) => s.filter((x) => x.id !== id));
 
+  // Update sets or reps for a selected exercise
   const updateField = (id: string, field: 'sets' | 'reps', valueStr: string) =>
     setSelected((s) =>
       s.map((ex) => (ex.id === id ? { ...ex, [field]: parseInt(valueStr, 10) || 0 } : ex))
     );
 
+  // Format exercises as display strings (e.g., "Shoulder Flexion (3×10)")
+  const formatExercises = (exercises: Exercise[]): string[] => {
+    return exercises.map((ex) => `${ex.name} (${ex.sets}×${ex.reps})`);
+  };
+
+  // Save the exercise plan to the selected patient
   const handleSave = () => {
-    //save data to backend!!
-    onClose();
+    if (patient) {
+      const updatedPatient: Patient = {
+        ...patient,
+        exercises: formatExercises(selected),
+      };
+      onSave(updatedPatient);
+      setSelected([]);
+    }
   };
 
   return (
@@ -167,9 +299,12 @@ function CreateExercisePlanModal({
             </Pressable>
           </View>
 
+          {/* Two-column layout: exercise library (left) and selected plan (right) */}
           <View style={styles.twoColumnContainer}>
-            {/* Left: library */}
+            
+            {/* Left column: Exercise library with search and filters */}
             <View style={styles.leftColumn}>
+              {/* Search input for exercises */}
               <TextInput
                 placeholder="Search exercises..."
                 value={search}
@@ -178,6 +313,7 @@ function CreateExercisePlanModal({
                 placeholderTextColor="#8b8f96"
               />
 
+              {/* Category filter buttons */}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8, gap: 8 }}>
                 {categories.map((c) => (
                   <TouchableOpacity
@@ -190,6 +326,7 @@ function CreateExercisePlanModal({
                 ))}
               </View>
 
+              {/* Scrollable list of filtered exercises */}
               <ScrollView style={{ flex: 1 }}>
                 {filtered.map((ex) => {
                   const isSelected = selected.some((s) => s.id === ex.id);
@@ -219,8 +356,9 @@ function CreateExercisePlanModal({
               </ScrollView>
             </View>
 
-            {/* Right: selected plan */}
+            {/* Right column: Selected exercises and customization */}
             <View style={styles.rightColumn}>
+              {/* Plan header with exercise count */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ fontWeight: '700' }}>Exercise Plan</Text>
                 <View style={styles.badgeSmall}>
@@ -228,6 +366,7 @@ function CreateExercisePlanModal({
                 </View>
               </View>
 
+              {/* Scrollable list of selected exercises with customization options */}
               <ScrollView style={{ flex: 1 }}>
                 {selected.length === 0 ? (
                   <View style={{ paddingVertical: 20 }}>
@@ -238,6 +377,7 @@ function CreateExercisePlanModal({
                     <View key={ex.id} style={styles.selectedCardContainer}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                          {/* Exercise number badge */}
                           <View style={styles.indexCircle}><Text style={{ color: '#0a7ea4' }}>{idx + 1}</Text></View>
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontWeight: '600' }}>{ex.name}</Text>
@@ -246,11 +386,14 @@ function CreateExercisePlanModal({
                             </View>
                           </View>
                         </View>
+                        
+                        {/* Delete exercise button */}
                         <TouchableOpacity style={styles.trashButton} onPress={() => removeExercise(ex.id)}>
                           <Text style={{ color: '#ef4444' }}>🗑</Text>
                         </TouchableOpacity>
                       </View>
 
+                      {/* Sets and reps input fields */}
                       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
                         <View style={{ flex: 1 }}>
                           <Text style={{ fontSize: 12, color: '#6b7280' }}>Sets</Text>
@@ -276,6 +419,7 @@ function CreateExercisePlanModal({
                 )}
               </ScrollView>
 
+              {/* Save and template buttons */}
               <View style={{ marginTop: 12 }}>
                 <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
                   <Text style={styles.saveButtonText}>Save & Assign Plan</Text>
@@ -292,18 +436,25 @@ function CreateExercisePlanModal({
   );
 }
 
-// PatientsList inlined here (previously in ./my-patients)
+// Patient data type definition
 type Patient = { id: string; name: string; email: string; exercises: string[] };
+
+// Sample patient data for initial state
 const SAMPLE: Patient[] = [
   { id: '1', name: 'John Smith', email: 'smithjohn@gmail.com', exercises: ['Shoulder Flexion (3×10)', 'Knee Extension (2×15)'] },
   { id: '2', name: 'Micheal Scott', email: 'theoffice@email.com', exercises: ['Hip Abduction (3×12)'] },
   { id: '3', name: 'Taylor Johnson', email: 'taylor@email.com', exercises: [] },
 ];
 
-function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
+/**
+ * Component displaying a searchable list of patients with action buttons
+ * Shows patient info, current exercises, and options to create/edit plans
+ */
+function PatientsListInline({ onEdit, patients, onAdd }: { onEdit: (p: Patient) => void; patients: Patient[]; onAdd: () => void }) {
+  // Search query state
   const [query, setQuery] = useState('');
-  const patients = SAMPLE;
-
+  
+  // Memoized filtered patient list based on search (by name or email)
   const filtered = useMemo(
     () =>
       patients.filter(
@@ -314,7 +465,9 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
     [query, patients]
   );
 
+  // Render individual patient row
   function renderItem({ item }: { item: Patient }) {
+    // Generate initials from patient name for avatar
     const initials = item.name
       .split(' ')
       .map((n) => n[0])
@@ -324,22 +477,32 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
 
     return (
       <View style={styles.row}>
+        {/* Left section: Avatar and patient info */}
         <View style={styles.left}>
+          {/* Avatar with initials */}
           <View style={styles.avatar}>
             <ThemedText style={styles.avatarText}>{initials}</ThemedText>
           </View>
+          
+          {/* Patient details */}
           <View style={styles.info}>
             <View style={styles.nameRow}>
               <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
+              {/* Badge showing number of assigned exercises */}
               <View style={styles.badge}>
                 <ThemedText style={styles.badgeText}>
                   {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
                 </ThemedText>
               </View>
             </View>
+            
+            {/* Patient email */}
             <ThemedText style={styles.email}>{item.email}</ThemedText>
 
+            {/* Current exercises label */}
             <ThemedText style={styles.currentLabel}>Current Exercises:</ThemedText>
+            
+            {/* List of assigned exercises or placeholder */}
             <View style={styles.pillsRow}>
               {item.exercises.length > 0 ? (
                 item.exercises.map((ex, i) => (
@@ -354,7 +517,9 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
           </View>
         </View>
 
+        {/* Right section: Action buttons */}
         <View style={styles.actions}>
+          {/* Create/Edit plan button */}
           <TouchableOpacity
             style={styles.outlineBtn}
             onPress={() => onEdit(item)}
@@ -363,6 +528,7 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
             <ThemedText style={styles.outlineBtnText}> {item.exercises.length ? 'Edit Plan' : 'Create Plan'}</ThemedText>
           </TouchableOpacity>
 
+          {/* View progress button */}
           <TouchableOpacity style={styles.outlineBtn}>
             <ThemedText style={styles.outlineBtnText}>View Progress</ThemedText>
           </TouchableOpacity>
@@ -373,10 +539,12 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
 
   return (
     <ThemedView>
+      {/* Header with search and add button */}
       <View style={styles.headerRow}>
         <ThemedText type="title">My Patients</ThemedText>
 
         <View style={styles.headerActions}>
+          {/* Search input for filtering patients */}
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -384,13 +552,16 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
             style={styles.search}
             placeholderTextColor="#8b8f96"
           />
-          <TouchableOpacity style={styles.addBtn}>
+          
+          {/* Add new patient button */}
+          <TouchableOpacity style={styles.addBtn} onPress={onAdd}>
             <IconSymbol name="person.bust" size={16} color="#fff" />
             <ThemedText style={styles.addBtnText}> Add Patient</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Scrollable list of filtered patients */}
       <FlatList
         data={filtered}
         keyExtractor={(i) => i.id}
@@ -398,12 +569,11 @@ function PatientsListInline({ onEdit }: { onEdit: (p: Patient) => void }) {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={{ paddingBottom: 40 }}
       />
-      {/* Modal placed here so it's part of the same file; parent controls visibility */}
-      {/* The parent DoctorDashboard passes onEdit that opens the modal — it holds modal state */}
     </ThemedView>
   );
 }
 
+// StyleSheet containing all component styles
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: 50 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
@@ -417,7 +587,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
   card: { width: '48%', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#f0f0f0' },
 
-  // PatientsList styles (inlined)
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   search: { minWidth: 180, height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#f3f4f6', color: '#000' },
