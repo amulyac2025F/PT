@@ -8,10 +8,15 @@ import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function DoctorDashboard() {
+  //tabs
   type Tab = 'Home' | 'My Patients' | 'Profile';
+  //active set to home
   const [active, setActive] = useState<Tab>('Home');
+  //exrcise modal set to false
   const [planModalVisible, setPlanModalVisible] = useState(false);
+  //selectedPatient holds patient being edited/starts as null
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  //defaults to light theme
   const colorScheme = useColorScheme() ?? 'light';
   const tint = Colors[colorScheme].tint;
 
@@ -19,12 +24,15 @@ export default function DoctorDashboard() {
     <ThemedView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
+        {/*sets title to PT Portal */}
         <ThemedText type="title">PT Portal</ThemedText>
         <View style={styles.headerRight}>
+          {/*house button to switch to patient view*/}
           <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.headerButton}>
             <IconSymbol name="house.fill" size={20} color={tint} />
             <ThemedText style={{ marginLeft: 8 }}>Switch to Patient</ThemedText>
           </TouchableOpacity>
+                    {/*arrow button to switch to sign in view*/}
           <TouchableOpacity onPress={() => router.replace('/signin')} style={styles.headerButton}>
             <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={tint} />
             <ThemedText style={{ marginLeft: 8 }}>Logout</ThemedText>
@@ -32,7 +40,7 @@ export default function DoctorDashboard() {
         </View>
       </View>
 
-      {/* Nav */}
+      {/* Navigation + creates a touchable button for each one*/}
       <View style={styles.nav}>
         {(['Home', 'My Patients', 'Profile'] as Tab[]).map((t) => (
           <TouchableOpacity
@@ -97,7 +105,7 @@ export default function DoctorDashboard() {
   );
 }
 
-// CreateExercisePlanModal — two-column layout like your web example
+// CreateExercisePlanModal — two-column layout 
 function CreateExercisePlanModal({
   patient,
   visible,
@@ -110,7 +118,7 @@ function CreateExercisePlanModal({
   type Exercise = { id: string; name: string; description?: string; reps: number; sets: number; category: string };
 
   const exerciseLibrary: Exercise[] = [
-    { id: 'e1', name: 'Shoulder Flexion', description: 'Raise arm forward', reps: 10, sets: 3, category: 'Shoulder' },
+    { id: 'e1', name: 'Shoulder flexion', description: 'Raise arm forward', reps: 10, sets: 3, category: 'Shoulder' },
     { id: 'e2', name: 'Shoulder Abduction', description: 'Raise arm sideways', reps: 10, sets: 3, category: 'Shoulder' },
     { id: 'e3', name: 'Shoulder External Rotation', description: 'Rotate shoulder outward', reps: 12, sets: 2, category: 'Shoulder' },
     { id: 'e4', name: 'Knee Extension', description: 'Straighten knee', reps: 15, sets: 2, category: 'Knee' },
@@ -144,8 +152,7 @@ function CreateExercisePlanModal({
     );
 
   const handleSave = () => {
-    // placeholder: persist plan or call API
-    // console.log('save plan for', patient?.name, selected);
+    //save data to backend!!
     onClose();
   };
 
