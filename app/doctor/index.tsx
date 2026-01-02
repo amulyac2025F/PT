@@ -6,154 +6,131 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { PatientProgress } from './PatientProgress'; // Ensure this file exists in the same folder
+import { PatientProgress } from './PatientProgress';
 
-// --- TYPES & SAMPLE DATA (Moved to top to fix reference errors) ---
 type Patient = { id: string; name: string; email: string; exercises: string[] };
 
 const SAMPLE: Patient[] = [
-  { id: '1', name: 'John Smith', email: 'smithjohn@gmail.com', exercises: ['Shoulder Flexion (3×10)', 'Knee Extension (2×15)'] },
+  { id: '1', name: 'John Smith', email: 'smithjohn23@gmail.com', exercises: ['Shoulder Flexion (3×10)', 'Knee Extension (2×15)'] },
   { id: '2', name: 'Micheal Scott', email: 'theoffice@email.com', exercises: ['Hip Abduction (3×12)'] },
   { id: '3', name: 'Taylor Johnson', email: 'taylor@email.com', exercises: [] },
 ];
 
-export default function DoctorDashboard() {
-  // tabs
-  type Tab = 'Home' | 'My Patients' | 'Profile';
-  // active set to home
-  const [active, setActive] = useState<Tab>('Home');
-  // exercise modal set to false
-  const [planModalVisible, setPlanModalVisible] = useState(false);
-  // selectedPatient holds patient being edited/starts as null
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  // defaults to light theme
-  const colorScheme = useColorScheme() ?? 'light';
-  const tint = Colors[colorScheme].tint;
+// Color system
+const colorPalette = {
+  primary: '#0a7ea4',
+  secondary: '#00d4ff',
+  success: '#22c55e',
+  danger: '#ef4444',
+  text: '#111827',
+  textSecondary: '#6b7280',
+  border: '#e5e7eb',
+  background: '#f9fafb',
+  surface: '#ffffff',
+  shadowColor: '#00000015',
+};
 
-  // State for patient list and add patient modal
+export default function DoctorDashboard() {
+  const [planModalVisible, setPlanModalVisible] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patients, setPatients] = useState<Patient[]>(() => SAMPLE);
   const [addPatientModalVisible, setAddPatientModalVisible] = useState(false);
   const [newPatientForm, setNewPatientForm] = useState({ name: '', email: '', patientId: '' });
+  const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
 
-  // NEW: Track if viewing patient progress
-  const [viewingProgressPatient, setViewingProgressPatient] = useState<Patient | null>(null);
+  const colorScheme = useColorScheme() ?? 'light';
+  const tint = Colors[colorScheme].tint;
 
-  // Reset form and show add patient modal
   const openAddPatient = () => {
     setNewPatientForm({ name: '', email: '', patientId: '' });
     setAddPatientModalVisible(true);
   };
 
-  // Hide add patient modal
   const closeAddPatient = () => setAddPatientModalVisible(false);
 
-  // Add a new patient to the list after validation
   const handleAddPatient = () => {
     if (!newPatientForm.name.trim() || !newPatientForm.email.trim() || !newPatientForm.patientId.trim()) {
       return;
     }
-    
     const newP: Patient = {
       id: Date.now().toString(),
       name: newPatientForm.name.trim(),
       email: newPatientForm.email.trim(),
       exercises: [],
     };
-    
     setPatients((prev) => [newP, ...prev]);
     closeAddPatient();
   };
 
-  // Update patient's exercise plan when saved from modal
-  const handleSavePlan = (updatedPatient: Patient) => {
+  const handleSavePlan = (exercises: string[]) => {
+    if (!selectedPatient) return;
     setPatients((prev) =>
-      prev.map((p) => (p.id === updatedPatient.id ? updatedPatient : p))
+      prev.map((p) =>
+        p.id === selectedPatient.id ? { ...p, exercises } : p
+      )
     );
     setPlanModalVisible(false);
+    setSelectedPatient(null);
   };
-
-  // Handle viewing patient progress
-  const handleViewProgress = (patient: Patient) => {
-    setViewingProgressPatient(patient);
-  };
-
-  // NEW: Screen swap logic
-  if (viewingProgressPatient) {
-    return (
-      <PatientProgress 
-        patientName={viewingProgressPatient.name} 
-        onBack={() => setViewingProgressPatient(null)} 
-      />
-    );
-  }
 
   return (
-    <ThemedView style={styles.container}>
-      <View style={styles.header}>
-        <ThemedText type="title">PT Portal</ThemedText>
+    <ThemedView style={[styles.container, { backgroundColor: colorPalette.background }]}>
+      {/* Premium Header */}
+      <View style={[styles.header, { backgroundColor: colorPalette.surface, borderBottomColor: colorPalette.border }]}>
+        <View>
+          <ThemedText type="title" style={styles.headerTitle}>Doctor Portal</ThemedText>
+          <ThemedText style={styles.headerSubtitle}>Manage your patients effectively</ThemedText>
+        </View>
         <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={styles.headerButton}>
-            <IconSymbol name="house.fill" size={20} color={tint} />
-            <ThemedText style={{ marginLeft: 8 }}>Switch to Patient</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.replace('/signin')} style={styles.headerButton}>
-            <IconSymbol name="rectangle.portrait.and.arrow.right" size={18} color={tint} />
-            <ThemedText style={{ marginLeft: 8 }}>Logout</ThemedText>
+          <View style={styles.avatarSection}>
+            <View style={[styles.avatar, { backgroundColor: '#e0f2fe', borderColor: colorPalette.primary, borderWidth: 2 }]}>
+              <ThemedText style={[styles.avatarText, { color: colorPalette.primary }]}>DR</ThemedText>
+            </View>
+            <View>
+              <ThemedText style={styles.doctorName}>Dr. Smith</ThemedText>
+              <ThemedText style={styles.doctorRole}>Senior PT</ThemedText>
+            </View>
+          </View>
+
+          <TouchableOpacity onPress={() => router.replace('/signin')} style={[styles.logoutBtn, { backgroundColor: '#fee2e2', borderColor: colorPalette.danger, borderWidth: 1 }]}>
+            <IconSymbol name="rectangle.portrait.and.arrow.right" size={16} color={colorPalette.danger} />
+            <ThemedText style={[styles.logoutText, { color: colorPalette.danger }]}>Logout</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.nav}>
-        {(['Home', 'My Patients', 'Profile'] as Tab[]).map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setActive(t)}
-            style={[styles.navBtn, active === t && { borderBottomColor: tint, borderBottomWidth: 2 }]}
-          >
-            <ThemedText style={active === t ? styles.navTextActive : styles.navText}>{t}</ThemedText>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {active === 'Home' && (
-          <View>
-            <ThemedText type="subtitle">Welcome back, Dr. Smith</ThemedText>
-            <View style={styles.grid}>
-              <View style={styles.card}>
-                <ThemedText type="defaultSemiBold">Total Patients</ThemedText>
-                <ThemedText type="title">{patients.length}</ThemedText>
+      {/* Premium Stats Grid */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.statsContainer}>
+          {[
+            { label: 'Total Patients', value: patients.length.toString(), icon: '👥', color: '#dbeafe', lightColor: '#e0f2fe' },
+            { label: 'Active Plans', value: patients.filter((p) => p.exercises.length > 0).length.toString(), icon: '📋', color: '#dcfce7', lightColor: '#f0fdf4' },
+            { label: 'Pending Reviews', value: '5', icon: '⏰', color: '#fed7aa', lightColor: '#fffbeb' },
+            { label: 'Completion Rate', value: '87%', icon: '📊', color: '#e9d5ff', lightColor: '#faf5ff' },
+          ].map((stat, idx) => (
+            <View key={idx} style={[styles.statCard, { backgroundColor: colorPalette.surface }]}>
+              <View style={[styles.statIconBox, { backgroundColor: stat.lightColor }]}>
+                <Text style={styles.statIcon}>{stat.icon}</Text>
               </View>
-              <View style={styles.card}>
-                <ThemedText type="defaultSemiBold">Active Plans</ThemedText>
-                <ThemedText type="title">{patients.filter(p => p.exercises.length > 0).length}</ThemedText>
-              </View>
-              <View style={styles.card}>
-                <ThemedText type="defaultSemiBold">Needs Attention</ThemedText>
-                <ThemedText type="title">3</ThemedText>
-              </View>
+              <ThemedText style={styles.statLabel}>{stat.label}</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.statValue}>
+                {stat.value}
+              </ThemedText>
             </View>
-          </View>
-        )}
+          ))}
+        </View>
 
-        {active === 'My Patients' && (
+        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           <PatientsListInline
             patients={patients}
-            onAdd={() => openAddPatient()}
+            onAdd={openAddPatient}
             onEdit={(p) => {
               setSelectedPatient(p);
               setPlanModalVisible(true);
             }}
-            onViewProgress={handleViewProgress} // Connected function
+            onViewProgress={(p) => setViewingPatient(p)}
           />
-        )}
-
-        {active === 'Profile' && (
-          <View>
-            <ThemedText type="subtitle">Profile</ThemedText>
-            <ThemedText>Doctor profile and settings placeholder.</ThemedText>
-          </View>
-        )}
+        </View>
 
         <CreateExercisePlanModal
           patient={selectedPatient}
@@ -161,37 +138,78 @@ export default function DoctorDashboard() {
           onClose={() => setPlanModalVisible(false)}
           onSave={handleSavePlan}
         />
+      </ScrollView>
 
-        <Modal visible={addPatientModalVisible} animationType="slide" onRequestClose={closeAddPatient} transparent>
-          <View style={styles.modalOverlay}>
-            <View style={[styles.modal, { width: '90%', maxHeight: '60%' }]}>
-              <View style={styles.modalHeader}>
+      {/* Add Patient Modal */}
+      <Modal visible={addPatientModalVisible} animationType="slide" onRequestClose={closeAddPatient} transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
                 <Text style={styles.modalTitle}>Add Patient</Text>
-                <Pressable onPress={closeAddPatient}><Text style={styles.modalClose}>Close</Text></Pressable>
+                <Text style={styles.modalSubtitle}>Create a new patient profile</Text>
               </View>
-              <View style={{ paddingVertical: 8 }}>
-                <Text style={{ marginBottom: 6 }}>Name</Text>
-                <TextInput placeholder="Patient name" value={newPatientForm.name} onChangeText={(v) => setNewPatientForm((s) => ({ ...s, name: v }))} style={styles.search} placeholderTextColor="#8b8f96" />
-                <Text style={{ marginTop: 8, marginBottom: 6 }}>Email</Text>
-                <TextInput placeholder="patient@email.com" value={newPatientForm.email} onChangeText={(v) => setNewPatientForm((s) => ({ ...s, email: v }))} style={styles.search} placeholderTextColor="#8b8f96" />
-                <Text style={{ marginTop: 8, marginBottom: 6 }}>Patient ID</Text>
-                <TextInput placeholder="Patient ID" value={newPatientForm.patientId} onChangeText={(v) => setNewPatientForm((s) => ({ ...s, patientId: v }))} style={styles.search} placeholderTextColor="#8b8f96" />
+              <Pressable onPress={closeAddPatient} style={[styles.closeBtn, { backgroundColor: '#f3f4f6' }]}>
+                <IconSymbol name="xmark" size={18} color={colorPalette.text} />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalForm}>
+              <View style={styles.formGroup}>
+                <ThemedText style={styles.formLabel}>Full Name</ThemedText>
+                <TextInput
+                  placeholder="Enter patient name"
+                  value={newPatientForm.name}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, name: v }))}
+                  style={[styles.input, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}
+                  placeholderTextColor={colorPalette.textSecondary}
+                />
               </View>
-              <View style={{ marginTop: 12, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
-                <TouchableOpacity style={[styles.outlineBtn, { paddingHorizontal: 16 }]} onPress={closeAddPatient}><Text style={styles.outlineBtnText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={handleAddPatient}><Text style={styles.saveButtonText}>Add Patient</Text></TouchableOpacity>
+              <View style={styles.formGroup}>
+                <ThemedText style={styles.formLabel}>Email Address</ThemedText>
+                <TextInput
+                  placeholder="patient@example.com"
+                  value={newPatientForm.email}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, email: v }))}
+                  style={[styles.input, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}
+                  keyboardType="email-address"
+                  placeholderTextColor={colorPalette.textSecondary}
+                />
+              </View>
+              <View style={styles.formGroup}>
+                <ThemedText style={styles.formLabel}>Patient ID</ThemedText>
+                <TextInput
+                  placeholder="P-001234"
+                  value={newPatientForm.patientId}
+                  onChangeText={(v) => setNewPatientForm((s) => ({ ...s, patientId: v }))}
+                  style={[styles.input, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}
+                  placeholderTextColor={colorPalette.textSecondary}
+                />
               </View>
             </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]} onPress={closeAddPatient}>
+                <ThemedText style={[styles.secondaryBtnText, { color: colorPalette.text }]}>Cancel</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colorPalette.primary }]} onPress={handleAddPatient}>
+                <ThemedText style={styles.primaryBtnText}>Add Patient</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
+        </View>
+      </Modal>
+
+      {viewingPatient ? (
+        <Modal visible={!!viewingPatient} animationType="slide" onRequestClose={() => setViewingPatient(null)} transparent={false}>
+          <PatientProgress patientName={viewingPatient.name} onBack={() => setViewingPatient(null)} />
         </Modal>
-      </ScrollView>
+      ) : null}
     </ThemedView>
   );
 }
 
-// --- SUB-COMPONENTS (RESTORED FULL DETAIL) ---
-
-function CreateExercisePlanModal({ patient, visible, onClose, onSave }: { patient: Patient | null; visible: boolean; onClose: () => void; onSave: (updatedPatient: Patient) => void }) {
+function CreateExercisePlanModal({ patient, visible, onClose, onSave }: { patient: Patient | null; visible: boolean; onClose: () => void; onSave: (exercises: string[]) => void }) {
   type Exercise = { id: string; name: string; description?: string; reps: number; sets: number; category: string };
   const exerciseLibrary: Exercise[] = [
     { id: 'e1', name: 'Shoulder Flexion', description: 'Raise arm forward', reps: 10, sets: 3, category: 'Shoulder' },
@@ -225,27 +243,31 @@ function CreateExercisePlanModal({ patient, visible, onClose, onSave }: { patien
     setSelected((s) => s.map((ex) => (ex.id === id ? { ...ex, [field]: parseInt(valueStr, 10) || 0 } : ex)));
 
   const handleSave = () => {
-    if (patient) {
-      onSave({ ...patient, exercises: selected.map((ex) => `${ex.name} (${ex.sets}×${ex.reps})`) });
-      setSelected([]);
-    }
+    const exerciseStrings = selected.map((ex) => `${ex.name} (${ex.sets}×${ex.reps})`);
+    onSave(exerciseStrings);
+    setSelected([]);
   };
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
       <View style={styles.modalOverlay}>
-        <View style={[styles.modal, { width: '95%', maxHeight: '90%' }]}>
+        <View style={[styles.planModal, { backgroundColor: colorPalette.surface }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create Plan — {patient?.name ?? ''}</Text>
-            <Pressable onPress={onClose}><Text style={styles.modalClose}>Close</Text></Pressable>
+            <View>
+              <Text style={styles.modalTitle}>Create Exercise Plan</Text>
+              <Text style={styles.modalSubtitle}>For {patient?.name}</Text>
+            </View>
+            <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: '#f3f4f6' }]}>
+              <IconSymbol name="xmark" size={18} color={colorPalette.text} />
+            </Pressable>
           </View>
           <View style={styles.twoColumnContainer}>
             <View style={styles.leftColumn}>
-              <TextInput placeholder="Search exercises..." value={search} onChangeText={setSearch} style={styles.search} placeholderTextColor="#8b8f96" />
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginVertical: 8, gap: 8 }}>
+              <TextInput placeholder="Search exercises..." value={search} onChangeText={setSearch} style={[styles.input, { backgroundColor: colorPalette.background }]} placeholderTextColor={colorPalette.textSecondary} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginVertical: 12 }}>
                 {categories.map((c) => (
-                  <TouchableOpacity key={c} style={[styles.categoryBtn, selCategory === c && styles.categoryBtnActive]} onPress={() => setSelCategory(c)}>
-                    <Text style={{ color: selCategory === c ? '#fff' : '#111827' }}>{c}</Text>
+                  <TouchableOpacity key={c} style={[styles.categoryBtn, selCategory === c && { backgroundColor: colorPalette.primary, borderColor: colorPalette.primary }]} onPress={() => setSelCategory(c)}>
+                    <Text style={{ color: selCategory === c ? '#fff' : colorPalette.text, fontWeight: '500' }}>{c}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -253,51 +275,60 @@ function CreateExercisePlanModal({ patient, visible, onClose, onSave }: { patien
                 {filtered.map((ex) => {
                   const isSelected = selected.some((s) => s.id === ex.id);
                   return (
-                    <TouchableOpacity key={ex.id} onPress={() => toggleSelect(ex)} style={[styles.cardItem, isSelected && styles.selectedCard]}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontWeight: '600', marginBottom: 4 }}>{ex.name}</Text>
-                          {ex.description ? <Text style={{ color: '#6b7280', fontSize: 12 }}>{ex.description}</Text> : null}
-                          <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                            <Text style={{ color: '#6b7280', fontSize: 12 }}>{ex.sets} sets • {ex.reps} reps</Text>
-                          </View>
+                    <TouchableOpacity key={ex.id} onPress={() => toggleSelect(ex)} style={[styles.exerciseItem, isSelected && { backgroundColor: '#f0f9ff', borderColor: colorPalette.primary, borderWidth: 2 }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.exerciseName, { color: colorPalette.text }]}>{ex.name}</Text>
+                        {ex.description && <Text style={[styles.exerciseDesc, { color: colorPalette.textSecondary }]}>{ex.description}</Text>}
+                        <View style={{ flexDirection: 'row', marginTop: 8 }}>
+                          <Text style={[styles.exerciseInfo, { color: colorPalette.textSecondary }]}>{ex.sets} sets</Text>
+                          <Text style={[styles.exerciseInfo, { color: colorPalette.textSecondary, marginHorizontal: 6 }]}>•</Text>
+                          <Text style={[styles.exerciseInfo, { color: colorPalette.textSecondary }]}>{ex.reps} reps</Text>
                         </View>
-                        <View style={styles.badgeSmall}><Text style={{ fontSize: 12, color: '#374151' }}>{ex.category}</Text></View>
+                      </View>
+                      <View style={[styles.categoryBadge, { backgroundColor: colorPalette.background }]}>
+                        <Text style={{ fontSize: 11, color: colorPalette.textSecondary, fontWeight: '600' }}>{ex.category}</Text>
                       </View>
                     </TouchableOpacity>
                   );
                 })}
               </ScrollView>
             </View>
-            <View style={styles.rightColumn}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ fontWeight: '700' }}>Exercise Plan</Text>
-                <View style={styles.badgeSmall}><Text style={{ color: '#374151', fontSize: 12 }}>{selected.length}</Text></View>
+            <View style={[styles.rightColumn, { borderLeftColor: colorPalette.border }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={[styles.planTitle, { color: colorPalette.text }]}>Selected Exercises</Text>
+                <View style={[styles.selectedCount, { backgroundColor: colorPalette.primary }]}>
+                  <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12 }}>{selected.length}</Text>
+                </View>
               </View>
               <ScrollView style={{ flex: 1 }}>
                 {selected.length === 0 ? (
-                  <Text style={{ color: '#6b7280' }}>No exercises selected.</Text>
+                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <Text style={{ color: colorPalette.textSecondary, fontSize: 13 }}>Select exercises from the left</Text>
+                  </View>
                 ) : (
                   selected.map((ex, idx) => (
-                    <View key={ex.id} style={styles.selectedCardContainer}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                          <View style={styles.indexCircle}><Text style={{ color: '#0a7ea4' }}>{idx + 1}</Text></View>
-                          <Text style={{ fontWeight: '600' }}>{ex.name}</Text>
-                        </View>
-                        <TouchableOpacity onPress={() => removeExercise(ex.id)}><Text style={{ color: '#ef4444' }}>🗑</Text></TouchableOpacity>
+                    <View key={ex.id} style={[styles.selectedItem, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}>
+                      <View style={[styles.numberBadge, { backgroundColor: colorPalette.primary }]}>
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{idx + 1}</Text>
                       </View>
-                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                        <TextInput value={String(ex.sets)} onChangeText={(v) => updateField(ex.id, 'sets', v)} keyboardType="number-pad" style={[styles.numberInput, {flex:1}]} />
-                        <TextInput value={String(ex.reps)} onChangeText={(v) => updateField(ex.id, 'reps', v)} keyboardType="number-pad" style={[styles.numberInput, {flex:1}]} />
+                      <View style={{ flex: 1, marginLeft: 12 }}>
+                        <Text style={{ fontWeight: '600', color: colorPalette.text }}>{ex.name}</Text>
+                        <Text style={{ fontSize: 11, color: colorPalette.textSecondary, marginTop: 4 }}>{ex.category}</Text>
                       </View>
+                      <TouchableOpacity onPress={() => removeExercise(ex.id)}>
+                        <Text style={{ fontSize: 18, color: colorPalette.danger }}>×</Text>
+                      </TouchableOpacity>
                     </View>
                   ))
                 )}
               </ScrollView>
-              <View style={{ marginTop: 12 }}>
-                <TouchableOpacity style={styles.saveButton} onPress={handleSave}><Text style={styles.saveButtonText}>Save & Assign Plan</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.outlineBtn, { marginTop: 8 }]} onPress={onClose}><Text style={styles.outlineBtnText}>Save as Template</Text></TouchableOpacity>
+              <View style={{ gap: 10, marginTop: 12 }}>
+                <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colorPalette.primary }]} onPress={handleSave}>
+                  <ThemedText style={styles.primaryBtnText}>✓ Save & Assign</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: colorPalette.background, borderColor: colorPalette.border, borderWidth: 1 }]} onPress={onClose}>
+                  <ThemedText style={[styles.secondaryBtnText, { color: colorPalette.text }]}>Close</ThemedText>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -307,39 +338,72 @@ function CreateExercisePlanModal({ patient, visible, onClose, onSave }: { patien
   );
 }
 
-function PatientsListInline({ onEdit, patients, onAdd, onViewProgress }: { onEdit: (p: Patient) => void; patients: Patient[]; onAdd: () => void; onViewProgress: (p: Patient) => void }) {
+function PatientsListInline({ onEdit, patients, onAdd, onViewProgress }: { onEdit: (p: Patient) => void; patients: Patient[]; onAdd: () => void; onViewProgress?: (p: Patient) => void }) {
   const [query, setQuery] = useState('');
-  const filtered = useMemo(() => patients.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || p.email.toLowerCase().includes(query.toLowerCase())), [query, patients]);
+  const filtered = useMemo(
+    () =>
+      patients.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query.toLowerCase()) ||
+          p.email.toLowerCase().includes(query.toLowerCase())
+      ),
+    [query, patients]
+  );
 
   function renderItem({ item }: { item: Patient }) {
-    const initials = item.name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+    const initials = item.name
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
     return (
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <View style={styles.avatar}><ThemedText style={styles.avatarText}>{initials}</ThemedText></View>
-          <View style={styles.info}>
-            <View style={styles.nameRow}>
-              <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
-              <View style={styles.badge}><ThemedText style={styles.badgeText}>{item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}</ThemedText></View>
+      <View style={[styles.patientCard, { backgroundColor: colorPalette.surface }]}>
+        <View style={styles.patientLeft}>
+          <View style={[styles.patientAvatar, { backgroundColor: '#dbeafe', borderColor: colorPalette.primary, borderWidth: 2 }]}>
+            <ThemedText style={[styles.patientInitials, { color: colorPalette.primary }]}>{initials}</ThemedText>
+          </View>
+          <View style={styles.patientInfo}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ThemedText type="defaultSemiBold" style={{ color: colorPalette.text, fontSize: 15 }}>
+                {item.name}
+              </ThemedText>
+              <View style={[styles.exerciseContainer, { backgroundColor: '#f0fdf4' }]}>
+                <ThemedText style={[styles.exerciseBadgeText, { color: colorPalette.success }]}>
+                  {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
+                </ThemedText>
+              </View>
             </View>
-            <ThemedText style={styles.email}>{item.email}</ThemedText>
-            <ThemedText style={styles.currentLabel}>Current Exercises:</ThemedText>
-            <View style={styles.pillsRow}>
-              {item.exercises.length > 0 ? (
-                item.exercises.map((ex, i) => (<View key={i} style={styles.pill}><ThemedText style={styles.pillText}>{ex}</ThemedText></View>))
-              ) : (
-                <ThemedText style={styles.noExercises}>No exercises assigned</ThemedText>
-              )}
+            <ThemedText style={{ color: colorPalette.textSecondary, marginTop: 4, fontSize: 13 }}>{item.email}</ThemedText>
+            <View style={{ marginTop: 10 }}>
+              <ThemedText style={{ color: colorPalette.textSecondary, fontSize: 12, fontWeight: '600' }}>Current Exercises:</ThemedText>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6, gap: 6 }}>
+                {item.exercises.length > 0 ? (
+                  item.exercises.map((ex, i) => (
+                    <View key={i} style={[styles.exercisePill, { backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}>
+                      <ThemedText style={{ fontSize: 11, color: colorPalette.text }}>{ex}</ThemedText>
+                    </View>
+                  ))
+                ) : (
+                  <ThemedText style={{ color: colorPalette.textSecondary, fontSize: 12, fontStyle: 'italic' }}>No exercises assigned</ThemedText>
+                )}
+              </View>
             </View>
           </View>
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => onEdit(item)}>
-            <IconSymbol name="plus" size={14} color="#000" />
-            <ThemedText style={styles.outlineBtnText}> {item.exercises.length ? 'Edit Plan' : 'Create Plan'}</ThemedText>
+
+        <View style={styles.patientActions}>
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#f0f9ff', borderColor: colorPalette.primary, borderWidth: 1 }]} onPress={() => onEdit(item)}>
+            <IconSymbol name="plus" size={14} color={colorPalette.primary} />
+            <ThemedText style={[styles.actionBtnText, { color: colorPalette.primary }]}>
+              {item.exercises.length ? 'Edit' : 'Create'}
+            </ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.outlineBtn} onPress={() => onViewProgress(item)}>
-            <ThemedText style={styles.outlineBtnText}>View Progress</ThemedText>
+
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colorPalette.primary }]} onPress={() => onViewProgress && onViewProgress(item)}>
+            <IconSymbol name="chart.bar" size={14} color="#fff" />
+            <ThemedText style={[styles.actionBtnText, { color: '#fff' }]}>View</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
@@ -347,75 +411,236 @@ function PatientsListInline({ onEdit, patients, onAdd, onViewProgress }: { onEdi
   }
 
   return (
-    <ThemedView>
-      <View style={styles.headerRow}>
-        <ThemedText type="title">My Patients</ThemedText>
-        <View style={styles.headerActions}>
-          <TextInput value={query} onChangeText={setQuery} placeholder="Search patients..." style={styles.search} placeholderTextColor="#8b8f96" />
-          <TouchableOpacity style={styles.addBtn} onPress={onAdd}>
-            <IconSymbol name="person.bust" size={16} color="#fff" />
-            <ThemedText style={styles.addBtnText}> Add Patient</ThemedText>
+    <View>
+      <View style={{ marginBottom: 16 }}>
+        <ThemedText type="title" style={{ color: colorPalette.text, marginBottom: 12 }}>
+          Your Patients
+        </ThemedText>
+        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search patients..."
+            style={[styles.input, { flex: 1, backgroundColor: colorPalette.background, borderColor: colorPalette.border }]}
+            placeholderTextColor={colorPalette.textSecondary}
+          />
+          <TouchableOpacity 
+            style={[styles.addPatientBtn, { backgroundColor: colorPalette.primary }]} 
+            onPress={onAdd}
+          >
+            <IconSymbol name="plus" size={20} color="#fff" />
+            <ThemedText style={{ color: '#fff', marginLeft: 8, fontWeight: '700' }}>Add</ThemedText>
           </TouchableOpacity>
         </View>
       </View>
-      <FlatList data={filtered} keyExtractor={(i) => i.id} renderItem={renderItem} ItemSeparatorComponent={() => <View style={styles.separator} />} contentContainerStyle={{ paddingBottom: 40 }} />
-    </ThemedView>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(i) => i.id}
+        renderItem={renderItem}
+        scrollEnabled={false}
+        contentContainerStyle={{ gap: 12, paddingBottom: 40 }}
+      />
+    </View>
   );
 }
 
-// --- FULL STYLES RESTORED ---
+// ===== STYLES =====
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 50 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
+  container: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
+  
+  // Header
+  header: {
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+  },
+
+  // Selected Count
+  selectedCount: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Plan Title
+  planTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // Selected Item
+  selectedItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  // Patient Card
+  patientCard: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    gap: 12,
+  },
+  patientLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  patientInitials: {
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  patientInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  patientActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  headerTitle: { fontSize: 26, fontWeight: '700', marginBottom: 2 },
+  headerSubtitle: { fontSize: 13, color: colorPalette.textSecondary },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerButton: { flexDirection: 'row', alignItems: 'center' },
-  nav: { flexDirection: 'row', paddingHorizontal: 12, gap: 8, marginBottom: 8 },
-  navBtn: { paddingVertical: 8, paddingHorizontal: 12 },
-  navText: { color: '#6b7280' },
-  navTextActive: { color: '#0a7ea4', fontWeight: '600' },
-  content: { paddingHorizontal: 20, paddingBottom: 80 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 12 },
-  card: { width: '48%', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#f0f0f0' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  search: { minWidth: 180, height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#f3f4f6', color: '#000' },
-  addBtn: { backgroundColor: '#0a7ea4', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, flexDirection: 'row', alignItems: 'center' },
-  addBtnText: { color: '#fff' },
-  row: { flexDirection: 'row', paddingVertical: 18, paddingHorizontal: 8, alignItems: 'flex-start', justifyContent: 'space-between' },
-  left: { flexDirection: 'row', flex: 1, gap: 12 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#eef2f7', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontWeight: '700', color: '#1f2937' },
-  info: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  badge: { marginLeft: 8, backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  badgeText: { fontSize: 12, color: '#374151' },
-  email: { color: '#64748b', marginTop: 4 },
-  currentLabel: { marginTop: 10, color: '#374151', fontSize: 13 },
-  pillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  pill: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e6e9ee', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, marginRight: 8, marginBottom: 8 },
-  pillText: { fontSize: 12, color: '#111827' },
-  noExercises: { color: '#6b7280', fontSize: 13, marginTop: 6 },
-  actions: { justifyContent: 'center', alignItems: 'flex-end', gap: 10 },
-  outlineBtn: { flexDirection: 'row', borderWidth: 1, borderColor: '#e6e9ee', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, alignItems: 'center', backgroundColor: '#fff', marginBottom: 8 },
-  outlineBtnText: { color: '#111827' },
-  separator: { height: 1, backgroundColor: '#f3f4f6', marginVertical: 6 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },
-  modal: { backgroundColor: '#fff', borderRadius: 12, padding: 16, maxHeight: '90%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  modalTitle: { fontSize: 18, fontWeight: '700' },
-  modalClose: { color: '#0a7ea4' },
-  twoColumnContainer: { flexDirection: 'row', gap: 12, height: 520 },
-  leftColumn: { flex: 2, paddingRight: 8 },
-  rightColumn: { flex: 1, paddingLeft: 8, borderLeftWidth: 1, borderColor: '#f3f4f6' },
-  cardItem: { borderWidth: 1, borderColor: '#e6e9ee', borderRadius: 10, padding: 12, marginBottom: 10, backgroundColor: '#fff' },
-  selectedCard: { borderColor: '#0a7ea4', backgroundColor: '#f0f9ff' },
-  categoryBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e6e9ee' },
-  categoryBtnActive: { backgroundColor: '#0a7ea4', borderColor: '#0a7ea4' },
-  badgeSmall: { backgroundColor: '#f3f4f6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  selectedCardContainer: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: '#f3f4f6' },
-  indexCircle: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#eef6fb', justifyContent: 'center', alignItems: 'center' },
-  numberInput: { height: 36, borderRadius: 8, backgroundColor: '#f3f4f6', paddingHorizontal: 8 },
-  saveButton: { backgroundColor: '#0a7ea4', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  saveButtonText: { color: '#fff', fontWeight: '700' },
-  trashButton: { padding: 6 },
+  avatarSection: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  avatar: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontWeight: '700', fontSize: 13 },
+  doctorName: { fontWeight: '600', fontSize: 13 },
+  doctorRole: { fontSize: 11, color: colorPalette.textSecondary },
+  logoutBtn: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', gap: 4 },
+  logoutText: { fontSize: 12, fontWeight: '600' },
+
+  // Stats
+  statsContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingTop: 20, gap: 12 },
+  statCard: { width: '48%', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: colorPalette.border, alignItems: 'center' },
+  statIconBox: { width: 50, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  statIcon: { fontSize: 24 },
+  statLabel: { fontSize: 12, color: colorPalette.textSecondary, textAlign: 'center', marginBottom: 6 },
+  statValue: { fontSize: 22, color: colorPalette.text },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colorPalette.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingHorizontal: 20, paddingVertical: 24, maxHeight: '70%' },
+  planModal: { borderTopLeftRadius: 20, borderTopRightRadius: 20, flex: 1, maxHeight: '95%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: colorPalette.text },
+  modalSubtitle: { fontSize: 13, color: colorPalette.textSecondary, marginTop: 4 },
+  closeBtn: { width: 36, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  
+  // Form
+  modalForm: { gap: 16, marginBottom: 20 },
+  formGroup: { gap: 8 },
+  formLabel: { fontSize: 13, fontWeight: '600', color: colorPalette.text },
+  input: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, borderWidth: 1, color: colorPalette.text },
+  
+  // Buttons
+  primaryBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  secondaryBtn: { paddingVertical: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 6 },
+  secondaryBtnText: { fontWeight: '600', fontSize: 14 },
+  
+  // Modal Actions
+  modalActions: { flexDirection: 'row', gap: 12 },
+
+  // Action Button
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  actionBtnText: { fontSize: 12, fontWeight: '600' },
+
+  // Category Button
+  categoryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colorPalette.border,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+
+  // Exercise Plan Modal
+  twoColumnContainer: { flexDirection: 'row', height: 520, gap: 12, paddingHorizontal: 16 },
+  leftColumn: { flex: 2 },
+  rightColumn: { flex: 1, paddingLeft: 12, borderLeftWidth: 1 },
+  exerciseContainer: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  exerciseName: { fontSize: 14, fontWeight: '600' },
+  exercisePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  exerciseBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  patientAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  exerciseDesc: {
+    fontSize: 12,
+    color: colorPalette.textSecondary,
+  },
+  numberBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  exerciseInfo: {
+    fontSize: 12,
+    color: colorPalette.textSecondary,
+  },
+  exerciseItem: {
+    flexDirection: 'row',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colorPalette.border,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  // Add Patient Button
+  addPatientBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colorPalette.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
