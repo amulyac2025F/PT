@@ -3,6 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -16,6 +17,10 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const iconColor = Colors[colorScheme].icon;
   const [chatVisible, setChatVisible] = useState(false);
+  const router = useRouter();
+  const navigateToExercise = (id: string) => {
+    router.push({ pathname: '/exercise_detail', params: { id } });
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -97,11 +102,35 @@ export default function HomeScreen() {
           </View>
           
           <View style={styles.listCard}>
-            <ExerciseRow isCompleted={true} number={1} title="Shoulder Flexion" subtitle="Raise arm forward" meta="3 sets × 10 reps" tag="Shoulder" />
-            <View style={styles.divider} />
-            <ExerciseRow isCompleted={false} number={2} title="Knee Extension" subtitle="Straighten knee while seated" meta="2 sets × 15 reps" tag="Knee" />
-            <View style={styles.divider} />
-            <ExerciseRow isCompleted={false} number={3} title="Wall Push-ups" subtitle="Modified push-up" meta="2 sets × 12 reps" tag="Upper Body" />
+            <ExerciseRow 
+            isCompleted={true} 
+            number={1} 
+            title="Shoulder Flexion" 
+            subtitle="Raise arm forward" 
+            meta="3 sets × 10 reps" 
+            tag="Shoulder" 
+            onPressAction={() => navigateToExercise('shoulder')} 
+          />
+          <View style={styles.divider} />
+          <ExerciseRow 
+            isCompleted={false} 
+            number={2} 
+            title="Knee Extension" 
+            subtitle="Straighten knee while seated" 
+            meta="2 sets × 15 reps" 
+            tag="Knee" 
+            onPressAction={() => navigateToExercise('knee')} 
+          />
+          <View style={styles.divider} />
+          <ExerciseRow 
+            isCompleted={false} 
+            number={3} 
+            title="Wall Push-ups" 
+            subtitle="Modified push-up" 
+            meta="2 sets × 12 reps" 
+            tag="Upper Body" 
+            onPressAction={() => navigateToExercise('wall')} 
+          />
           </View>
         </View>
 
@@ -226,7 +255,7 @@ function ChatbotModal({ visible, onClose }: { visible: boolean; onClose: () => v
   );
 }
 
-function ExerciseRow({ isCompleted, number, title, subtitle, meta, tag }: any) {
+function ExerciseRow({ isCompleted, number, title, subtitle, meta, tag, onPressAction }: any) {
     return (
       <View style={styles.exerciseRow}>
         <View style={styles.iconColumn}>
@@ -247,7 +276,7 @@ function ExerciseRow({ isCompleted, number, title, subtitle, meta, tag }: any) {
             <View style={styles.tag}><ThemedText style={styles.tagText}>{tag}</ThemedText></View>
           </View>
         </View>
-        <TouchableOpacity style={isCompleted ? styles.reviewButton : styles.startButton}>
+        <TouchableOpacity style={isCompleted ? styles.reviewButton : styles.startButton} onPress={onPressAction}>
             <Text style={{ color: isCompleted ? '#000' : '#fff', fontWeight: 'bold' }}>{isCompleted ? 'Review' : 'Start'}</Text>
         </TouchableOpacity>
       </View>
